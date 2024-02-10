@@ -1,1 +1,4 @@
-load-test/user-files/results
+
+/node_modules
+bun.lockb
+main

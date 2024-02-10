@@ -1,9 +1,21 @@
-FROM denoland/deno:1.40.4
+# use the official Bun image
+# see all versions at https://hub.docker.com/r/oven/bun/tags
+FROM oven/bun:1 as base
+WORKDIR /usr/src/app
 
-WORKDIR /app
+# install dependencies into temp directory
+# this will cache them and speed up future builds
+ENV NODE_ENV=production
 
-ADD . /app
+FROM base AS install
+RUN mkdir -p /temp/prod
+COPY . /temp/prod/
+RUN cd /temp/prod && bun run build
 
-RUN deno cache main.ts
 
-CMD ["run", "--allow-all", "main.ts"]
+# copy production dependencies and source code into final image
+FROM base AS release
+COPY --from=install /temp/prod/main .
+
+USER bun
+ENTRYPOINT [ "./main" ]

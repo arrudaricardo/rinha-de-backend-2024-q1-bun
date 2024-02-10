@@ -10,6 +10,7 @@ interface Transacoe {
   descricao?: string;
 }
 
+
 const handler = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
@@ -58,4 +59,10 @@ const handler = async (request: Request): Promise<Response> => {
   throw new Error("No route handler was found for the path.");
 };
 
-Deno.serve({ port: 8080, onError: () => Deno.exit() }, handler);
+
+Bun.serve({
+  fetch(req) {
+    return handler(req)
+  },
+  port: 8080,
+});

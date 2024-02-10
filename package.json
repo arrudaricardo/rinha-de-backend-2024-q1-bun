@@ -1,0 +1,17 @@
+{
+  "name": "rinha-de-backend-2024-q1-deno",
+  "module": "main.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./main.ts --outfile main --compile"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "postgres": "^3.4.3"
+  }
+}

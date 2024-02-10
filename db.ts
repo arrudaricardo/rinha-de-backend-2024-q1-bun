@@ -1,4 +1,4 @@
-import postgres from "https://deno.land/x/postgresjs@v3.4.3/mod.js";
+import postgres from "postgres";
 
 export const sql = postgres({
   user: "postgres",
@@ -38,11 +38,7 @@ interface TransacoeResponse {
 }
 
 export async function getUserAccount(id: number | string): Promise<Account> {
-  const userAccount = await sql<{
-    id: number;
-    saldo: number;
-    limite: number;
-  }>`SELECT id, saldo, limite FROM account where id = ${id}`;
+  const userAccount = await sql`SELECT id, saldo, limite FROM account where id = ${id}`;
   if (!userAccount[0]) {
     throw new CustomHttpError(404, "User not found");
   }
@@ -81,10 +77,9 @@ export async function processPayment(
   await sql.begin(async (sql) => {
     await sql`
       INSERT INTO account_transaction (account_id, valor, tipo, descricao, realizada_em)
-      VALUES (${id}, ${transaction.valor}, ${transaction.tipo}, ${
-      transaction.descricao
-    }, ${new Date().toISOString()})
+      VALUES (${id}, ${transaction.valor}, ${transaction.tipo}, ${transaction.descricao ?? ''}, ${new Date().toISOString()})
     `;
+
     await sql`
       UPDATE account SET saldo = ${updatedUserAccount.saldo} WHERE id = ${id}
     `;
@@ -106,11 +101,11 @@ export async function getAccountTransations(
       data_extrato: new Date().toISOString(),
       limite: userAccount.limite,
     },
-    ultimas_transacoes: rows.map((t: UserAccountTransaction) => ({
-      valor: t.valor,
-      tipo: t.tipo,
-      descricao: t.descricao,
-      realizada_em: t.realizada_em,
+    ultimas_transacoes: rows.map((userAccounts) => ({
+      valor: userAccounts.valor,
+      tipo: userAccounts.tipo,
+      descricao: userAccounts.descricao,
+      realizada_em: userAccounts.realizada_em,
     })),
   };
 }
