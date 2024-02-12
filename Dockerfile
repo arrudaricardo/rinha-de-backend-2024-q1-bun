@@ -10,7 +10,7 @@ ENV NODE_ENV=production
 FROM base AS install
 RUN mkdir -p /temp/prod
 COPY . /temp/prod/
-RUN cd /temp/prod && bun run build
+RUN cd /temp/prod && bun install && bun run build
 
 
 # copy production dependencies and source code into final image
