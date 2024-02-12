@@ -37,8 +37,8 @@ interface TransacoeResponse {
   ultimas_transacoes: Array<UserAccountTransaction>;
 }
 
-export async function getUserAccount(id: number | string): Promise<Account> {
-  const userAccount = await sql`SELECT id, saldo, limite FROM account where id = ${id}`;
+export async function getUserAccount(id: number | string, tx: postgres.Sql): Promise<Account> {
+  const userAccount = await tx`SELECT id, saldo, limite FROM account where id = ${id}`;
   if (!userAccount[0]) {
     throw new CustomHttpError(404, "User not found");
   }
@@ -59,22 +59,28 @@ export async function processPayment(
   if (!transaction.descricao || transaction.descricao.length > 10) {
     throw new CustomHttpError(422, "Invalid descricao");
   }
-  const userAccount = await getUserAccount(id);
-  const valor =
-    transaction.tipo === "d" ? -transaction.valor : transaction.valor;
-  const updatedUserAccount = {
-    limite: userAccount.limite,
-    saldo: userAccount.saldo + valor,
-  };
 
-  if (
-    updatedUserAccount.saldo < -updatedUserAccount.limite ||
-    valor % 1 !== 0
-  ) {
-    throw new CustomHttpError(422, "Operation not allowed, insufficient funds");
-  }
+  return await sql.begin(async (sql) => {
+    await sql`SET LOCAL lock_timeout = '4s'`
+    await sql`SELECT pg_advisory_xact_lock(${+id})`
 
-  await sql.begin(async (sql) => {
+    const userAccount = await getUserAccount(id, sql);
+
+    const valor =
+      transaction.tipo === "d" ? -transaction.valor : transaction.valor;
+    const updatedUserAccount = {
+      limite: userAccount.limite,
+      saldo: userAccount.saldo + valor,
+    };
+
+
+    if (
+      updatedUserAccount.saldo < -updatedUserAccount.limite ||
+      valor % 1 !== 0
+    ) {
+      throw new CustomHttpError(422, "Operation not allowed, insufficient funds");
+    }
+
     await sql`
       INSERT INTO account_transaction (account_id, valor, tipo, descricao, realizada_em)
       VALUES (${id}, ${transaction.valor}, ${transaction.tipo}, ${transaction.descricao ?? ''}, ${new Date().toISOString()})
@@ -83,15 +89,16 @@ export async function processPayment(
     await sql`
       UPDATE account SET saldo = ${updatedUserAccount.saldo} WHERE id = ${id}
     `;
+
+    return updatedUserAccount;
   });
 
-  return updatedUserAccount;
 }
 
 export async function getAccountTransations(
   id: number | string
 ): Promise<TransacoeResponse> {
-  const userAccount = await getUserAccount(id);
+  const userAccount = await getUserAccount(id, sql);
   const rows = await sql<[UserAccountTransaction]>`
     SELECT t.valor, t.tipo, t.descricao, t.realizada_em FROM account_transaction t WHERE t.account_id = ${id} ORDER BY realizada_em DESC LIMIT 10
   `;

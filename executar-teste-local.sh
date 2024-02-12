@@ -1,6 +1,10 @@
 #!/usr/bin/bash
 
 # Use este script para executar testes locais
+#
+docker-compose down
+docker-compose up -d --build
+
 
 RESULTS_WORKSPACE="$(pwd)/load-test/user-files/results"
 GATLING_BIN_DIR=$HOME/Downloads/gatling-charts-highcharts-bundle-3.10.3/bin
@@ -25,4 +29,7 @@ startTest() {
     done
 }
 
-startTest
+# startTest
+runGatling
+
+docker-compose down

@@ -6,9 +6,11 @@
 :8000
 
 reverse_proxy deno-api-1:8080 deno-api-2:8080 {
+  flush_interval -1
 	lb_try_duration 6s
   lb_policy round_robin
   transport http {
       dial_timeout 10s
+      tls_insecure_skip_verify
   }
 }

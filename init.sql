@@ -1,4 +1,3 @@
-
 CREATE TABLE account (
   id INTEGER PRIMARY KEY,
   saldo INTEGER NOT NULL,
